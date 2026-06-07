@@ -42,9 +42,7 @@ class SsdpDiscoveryService {
   ///
   /// The returned stream completes after [timeout]. Cancelling the stream
   /// subscription early stops discovery and releases the socket.
-  Stream<LgTvDevice> discover({
-    Duration timeout = const Duration(seconds: 6),
-  }) {
+  Stream<LgTvDevice> discover({Duration timeout = const Duration(seconds: 6)}) {
     // Tracks IPs already emitted so each TV appears at most once.
     final seenIps = <String>{};
     final controller = StreamController<LgTvDevice>();
@@ -118,9 +116,7 @@ class SsdpDiscoveryService {
         timeoutTimer = Timer(timeout, cleanup);
       } on Object catch (e) {
         if (!controller.isClosed) {
-          controller.addError(
-            'Could not start network discovery: $e',
-          );
+          controller.addError('Could not start network discovery: $e');
         }
         await cleanup();
       }
@@ -233,12 +229,11 @@ class SsdpDiscoveryService {
 
     HttpClient? client;
     try {
-      client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 2);
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
       final request = await client.getUrl(uri);
       final response = await request.close().timeout(
-            const Duration(seconds: 2),
-          );
+        const Duration(seconds: 2),
+      );
       final body = await response
           .transform(const SystemEncoding().decoder)
           .join()

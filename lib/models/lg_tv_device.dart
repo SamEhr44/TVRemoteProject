@@ -70,15 +70,15 @@ class LgTvDevice {
   /// JSON shape used by [PairedTvStore]. Discovery-only fields are kept so a
   /// stored TV can still be displayed without re-running discovery.
   Map<String, dynamic> toJson() => {
-        'ip': ip,
-        'name': name,
-        'location': location,
-        'server': server,
-        'st': st,
-        'usn': usn,
-        'clientKey': clientKey,
-        'lastConnectedAt': lastConnectedAt,
-      };
+    'ip': ip,
+    'name': name,
+    'location': location,
+    'server': server,
+    'st': st,
+    'usn': usn,
+    'clientKey': clientKey,
+    'lastConnectedAt': lastConnectedAt,
+  };
 
   factory LgTvDevice.fromJson(Map<String, dynamic> json) {
     return LgTvDevice(
@@ -95,8 +95,7 @@ class LgTvDevice {
 
   /// Two devices are considered the same TV when they share an IP address.
   @override
-  bool operator ==(Object other) =>
-      other is LgTvDevice && other.ip == ip;
+  bool operator ==(Object other) => other is LgTvDevice && other.ip == ip;
 
   @override
   int get hashCode => ip.hashCode;

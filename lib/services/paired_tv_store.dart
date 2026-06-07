@@ -77,10 +77,8 @@ class PairedTvStore {
     try {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
       return decoded.map(
-        (ip, json) => MapEntry(
-          ip,
-          LgTvDevice.fromJson(json as Map<String, dynamic>),
-        ),
+        (ip, json) =>
+            MapEntry(ip, LgTvDevice.fromJson(json as Map<String, dynamic>)),
       );
     } on Object {
       return {};

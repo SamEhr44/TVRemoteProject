@@ -6,12 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/io.dart';
 
 /// High-level connection lifecycle exposed to the UI.
-enum LgConnectionState {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+enum LgConnectionState { disconnected, connecting, connected, error }
 
 /// Pairing/registration progress exposed to the UI.
 enum LgPairingState {
@@ -52,12 +47,14 @@ class LgWebOsService {
   final Duration commandTimeout;
 
   /// Current connection lifecycle state (listenable for the UI).
-  final ValueNotifier<LgConnectionState> connectionState =
-      ValueNotifier(LgConnectionState.disconnected);
+  final ValueNotifier<LgConnectionState> connectionState = ValueNotifier(
+    LgConnectionState.disconnected,
+  );
 
   /// Current pairing state (listenable for the UI).
-  final ValueNotifier<LgPairingState> pairingState =
-      ValueNotifier(LgPairingState.idle);
+  final ValueNotifier<LgPairingState> pairingState = ValueNotifier(
+    LgPairingState.idle,
+  );
 
   /// Human-readable status/instruction or last error, for display.
   final ValueNotifier<String?> statusMessage = ValueNotifier<String?>(null);
@@ -72,8 +69,7 @@ class LgWebOsService {
   final Map<String, Completer<Map<String, dynamic>>> _pending = {};
   Completer<String>? _registerCompleter;
 
-  bool get isConnected =>
-      connectionState.value == LgConnectionState.connected;
+  bool get isConnected => connectionState.value == LgConnectionState.connected;
 
   /// Connects to the TV at [ip] and registers, returning the client-key.
   ///
@@ -97,7 +93,8 @@ class LgWebOsService {
       _channel = await _openChannel(ip);
     } on Object catch (e) {
       connectionState.value = LgConnectionState.error;
-      final msg = 'Could not connect to TV at $ip. '
+      final msg =
+          'Could not connect to TV at $ip. '
           'Make sure the TV is on, on the same Wi-Fi, and that mobile/LAN '
           'control is enabled. ($e)';
       _setStatus(msg);
@@ -141,8 +138,10 @@ class LgWebOsService {
     final httpClient = HttpClient()
       ..connectionTimeout = const Duration(seconds: 5)
       ..badCertificateCallback = (cert, host, port) => true;
-    final ws = await WebSocket.connect(url, customClient: httpClient)
-        .timeout(const Duration(seconds: 6));
+    final ws = await WebSocket.connect(
+      url,
+      customClient: httpClient,
+    ).timeout(const Duration(seconds: 6));
     return IOWebSocketChannel(ws);
   }
 
@@ -244,12 +243,7 @@ class LgWebOsService {
     final completer = Completer<Map<String, dynamic>>();
     _pending[id] = completer;
 
-    _send({
-      'type': 'request',
-      'id': id,
-      'uri': uri,
-      'payload': ?payload,
-    });
+    _send({'type': 'request', 'id': id, 'uri': uri, 'payload': ?payload});
 
     return completer.future.timeout(
       commandTimeout,
@@ -270,9 +264,9 @@ class LgWebOsService {
       sendRequest('ssap://audio/setMute', payload: {'mute': mute});
 
   Future<void> showToast(String message) => sendRequest(
-        'ssap://system.notifications/createToast',
-        payload: {'message': message},
-      );
+    'ssap://system.notifications/createToast',
+    payload: {'message': message},
+  );
 
   Future<void> powerOff() =>
       sendRequest('ssap://com.webos.service.tvpower/power/turnOff');
