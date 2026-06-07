@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network + Wi-Fi multicast permissions for SSDP discovery and WebSocket
+         control of LG TVs on the local network. CHANGE_WIFI_MULTICAST_STATE is
+         needed to acquire a MulticastLock so the OS delivers multicast packets;
+         see MainActivity for the lock handling. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <application
         android:label="lg_webos_wifi_remote"
         android:name="${applicationName}"
