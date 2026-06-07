@@ -271,6 +271,30 @@ class LgWebOsService {
   Future<void> powerOff() =>
       sendRequest('ssap://com.webos.service.tvpower/power/turnOff');
 
+  /// Queries the TV's network status and returns the MAC address of the active
+  /// interface (preferring the connected one), for Wake-on-LAN. Returns null if
+  /// the TV doesn't report a usable MAC.
+  Future<String?> fetchMacAddress() async {
+    final status = await sendRequest(
+      'ssap://com.webos.service.connectionmanager/getStatus',
+    );
+    final wifi = (status['wifi'] as Map?)?.cast<String, dynamic>();
+    final wired = (status['wired'] as Map?)?.cast<String, dynamic>();
+
+    String? macOf(Map<String, dynamic>? iface) {
+      final mac = iface?['macAddress'];
+      return (mac is String && mac.isNotEmpty) ? mac : null;
+    }
+
+    bool isConnected(Map<String, dynamic>? iface) =>
+        iface?['state'] == 'connected';
+
+    // Prefer whichever interface is actually connected.
+    if (isConnected(wifi)) return macOf(wifi);
+    if (isConnected(wired)) return macOf(wired);
+    return macOf(wifi) ?? macOf(wired);
+  }
+
   // --- Directional / Home / Back / OK via the pointer input socket --------
   //
   // TODO: Home/Back/arrows/OK are NOT plain SSAP requests. They are delivered

@@ -55,9 +55,18 @@ class _PairingScreenState extends State<PairingScreen> {
         clientKey: widget.device.clientKey,
       );
 
+      // Best-effort: learn the TV's MAC so we can Wake-on-LAN it later.
+      String? mac;
+      try {
+        mac = await widget.lg.fetchMacAddress();
+      } catch (_) {
+        // Non-fatal — wake just stays unavailable until we learn the MAC.
+      }
+
       // Persist the (possibly new) client-key for future silent reconnects.
       final paired = widget.device.copyWith(
         clientKey: clientKey,
+        macAddress: mac,
         lastConnectedAt: DateTime.now().toIso8601String(),
       );
       await widget.store.savePairedTv(paired);

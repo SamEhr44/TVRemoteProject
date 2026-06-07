@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/lg_tv_device.dart';
 import '../services/lg_webos_service.dart';
 import '../services/paired_tv_store.dart';
+import '../services/wake_on_lan_service.dart';
 import '../widgets/remote_button.dart';
 
 /// The working remote. Sends SSAP commands over the shared [LgWebOsService]
@@ -24,8 +25,13 @@ class RemoteScreen extends StatefulWidget {
 }
 
 class _RemoteScreenState extends State<RemoteScreen> {
+  final WakeOnLanService _wol = WakeOnLanService();
   bool _muted = false;
   bool _reconnecting = false;
+
+  /// MAC learned for Wake-on-LAN; seeded from the paired device and refreshed
+  /// on each (re)connect.
+  late String? _macAddress = widget.device.macAddress;
 
   /// Runs a command, surfacing success or a readable error via SnackBar.
   Future<void> _run(
@@ -77,9 +83,17 @@ class _RemoteScreenState extends State<RemoteScreen> {
         ip: widget.device.ip,
         clientKey: widget.device.clientKey,
       );
+      String? mac;
+      try {
+        mac = await widget.lg.fetchMacAddress();
+      } catch (_) {
+        // Keep any previously-known MAC.
+      }
+      if (mac != null && mounted) setState(() => _macAddress = mac);
       await widget.store.savePairedTv(
         widget.device.copyWith(
           clientKey: key,
+          macAddress: mac,
           lastConnectedAt: DateTime.now().toIso8601String(),
         ),
       );
@@ -101,6 +115,26 @@ class _RemoteScreenState extends State<RemoteScreen> {
     await widget.lg.disconnect();
     if (!mounted) return;
     Navigator.of(context).pop();
+  }
+
+  /// Wake the TV back on (useful right after Power Off, which drops the link).
+  Future<void> _wake() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+    final mac = _macAddress;
+    if (mac == null || mac.isEmpty) return;
+    try {
+      await _wol.wake(mac, deviceIp: widget.device.ip);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Wake signal sent. Give the TV a few seconds…'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Wake failed: $e'), backgroundColor: errorColor),
+      );
+    }
   }
 
   @override
@@ -135,6 +169,7 @@ class _RemoteScreenState extends State<RemoteScreen> {
                 state: state,
                 reconnecting: _reconnecting,
                 onReconnect: _reconnect,
+                onWake: _macAddress != null ? _wake : null,
               ),
               Expanded(
                 child: AbsorbPointer(
@@ -380,11 +415,15 @@ class _ConnectionBar extends StatelessWidget {
     required this.state,
     required this.reconnecting,
     required this.onReconnect,
+    this.onWake,
   });
 
   final LgConnectionState state;
   final bool reconnecting;
   final VoidCallback onReconnect;
+
+  /// Wake-on-LAN action, shown while disconnected when a MAC is known.
+  final VoidCallback? onWake;
 
   @override
   Widget build(BuildContext context) {
@@ -428,6 +467,12 @@ class _ConnectionBar extends StatelessWidget {
               style: TextStyle(color: scheme.onErrorContainer),
             ),
           ),
+          if (onWake != null)
+            TextButton.icon(
+              onPressed: reconnecting ? null : onWake,
+              icon: const Icon(Icons.power_settings_new, size: 18),
+              label: const Text('Wake'),
+            ),
           TextButton(
             onPressed: reconnecting ? null : onReconnect,
             child: Text(reconnecting ? 'Reconnecting…' : 'Reconnect'),

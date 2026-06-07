@@ -26,6 +26,10 @@ class LgTvDevice {
   /// Null until the user has paired with this TV at least once.
   final String? clientKey;
 
+  /// The TV's network MAC address (learned while connected), used to send a
+  /// Wake-on-LAN magic packet to power the TV back on. Null until learned.
+  final String? macAddress;
+
   /// ISO-8601 timestamp of the last successful connection, if any.
   final String? lastConnectedAt;
 
@@ -37,6 +41,7 @@ class LgTvDevice {
     this.st,
     this.usn,
     this.clientKey,
+    this.macAddress,
     this.lastConnectedAt,
   });
 
@@ -53,6 +58,7 @@ class LgTvDevice {
     String? st,
     String? usn,
     String? clientKey,
+    String? macAddress,
     String? lastConnectedAt,
   }) {
     return LgTvDevice(
@@ -63,6 +69,7 @@ class LgTvDevice {
       st: st ?? this.st,
       usn: usn ?? this.usn,
       clientKey: clientKey ?? this.clientKey,
+      macAddress: macAddress ?? this.macAddress,
       lastConnectedAt: lastConnectedAt ?? this.lastConnectedAt,
     );
   }
@@ -77,6 +84,7 @@ class LgTvDevice {
     'st': st,
     'usn': usn,
     'clientKey': clientKey,
+    'macAddress': macAddress,
     'lastConnectedAt': lastConnectedAt,
   };
 
@@ -89,6 +97,7 @@ class LgTvDevice {
       st: json['st'] as String?,
       usn: json['usn'] as String?,
       clientKey: json['clientKey'] as String?,
+      macAddress: json['macAddress'] as String?,
       lastConnectedAt: json['lastConnectedAt'] as String?,
     );
   }

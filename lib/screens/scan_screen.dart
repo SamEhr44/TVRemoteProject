@@ -6,6 +6,7 @@ import '../models/lg_tv_device.dart';
 import '../services/lg_webos_service.dart';
 import '../services/paired_tv_store.dart';
 import '../services/ssdp_discovery_service.dart';
+import '../services/wake_on_lan_service.dart';
 import 'pairing_screen.dart';
 
 /// First screen: scans the local network for LG webOS TVs and lists them,
@@ -23,6 +24,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
   // One shared connection service for the whole session.
   final LgWebOsService _lg = LgWebOsService();
+  final WakeOnLanService _wol = WakeOnLanService();
 
   final List<LgTvDevice> _discovered = [];
   List<LgTvDevice> _paired = [];
@@ -87,6 +89,7 @@ class _ScanScreenState extends State<ScanScreen> {
     final merged = stored != null
         ? device.copyWith(
             clientKey: stored.clientKey,
+            macAddress: stored.macAddress,
             name: device.name.startsWith('LG ') ? stored.name : device.name,
           )
         : device;
@@ -99,6 +102,38 @@ class _ScanScreenState extends State<ScanScreen> {
     );
     // Refresh paired list when returning (a new pairing may have been saved).
     await _loadPaired();
+  }
+
+  /// Sends a Wake-on-LAN magic packet to power a previously-paired TV back on.
+  Future<void> _wake(LgTvDevice device) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+    final mac = device.macAddress;
+    if (mac == null || mac.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Connect once while the TV is on to enable Wake-on-LAN.',
+          ),
+        ),
+      );
+      return;
+    }
+    try {
+      await _wol.wake(mac, deviceIp: device.ip);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Wake signal sent to ${device.name}. '
+            'Give the TV a few seconds…',
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Wake failed: $e'), backgroundColor: errorColor),
+      );
+    }
   }
 
   @override
@@ -132,6 +167,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   device: tv,
                   paired: true,
                   onTap: () => _openDevice(tv),
+                  onWake: () => _wake(tv),
                 ),
               ),
             ],
@@ -208,11 +244,15 @@ class _DeviceTile extends StatelessWidget {
     required this.device,
     required this.paired,
     required this.onTap,
+    this.onWake,
   });
 
   final LgTvDevice device;
   final bool paired;
   final VoidCallback onTap;
+
+  /// When provided, shows a Wake-on-LAN power button (for paired TVs).
+  final VoidCallback? onWake;
 
   @override
   Widget build(BuildContext context) {
@@ -236,9 +276,20 @@ class _DeviceTile extends StatelessWidget {
         ),
         isThreeLine: device.location != null,
         trailing: paired
-            ? const Chip(
-                label: Text('Paired'),
-                visualDensity: VisualDensity.compact,
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onWake != null)
+                    IconButton(
+                      tooltip: 'Power on (Wake-on-LAN)',
+                      icon: const Icon(Icons.power_settings_new),
+                      onPressed: onWake,
+                    ),
+                  const Chip(
+                    label: Text('Paired'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
               )
             : const Icon(Icons.chevron_right),
         onTap: onTap,

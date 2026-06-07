@@ -31,6 +31,7 @@ The app talks directly to the TV on your LAN:
 - 💾 Client-key persistence and silent reconnect
 - 🎛️ Remote screen: Power Off, Home, Back, D-pad (Up/Down/Left/Right), OK,
   Volume Up/Down, Mute toggle, and a Toast test button
+- ⚡ Power **on** via Wake-on-LAN (learns the TV's MAC while connected)
 - ⚠️ Clear, non-silent error reporting throughout the UI
 - 🍏 iOS local-network permission setup
 - 🤖 Android network/multicast permissions + MulticastLock
@@ -46,6 +47,7 @@ lib/
   services/
     ssdp_discovery_service.dart  # SSDP/UPnP M-SEARCH discovery
     lg_webos_service.dart        # SSAP WebSocket: connect/register/commands
+    wake_on_lan_service.dart     # Wake-on-LAN magic-packet sender
     paired_tv_store.dart         # shared_preferences storage of paired TVs
   screens/
     scan_screen.dart             # Discover + list TVs
@@ -216,10 +218,18 @@ flutter pub get
   succeed but control fail if this is off.
 - **Accept the pairing prompt.** If pairing "times out," it usually means the
   on-screen prompt was not accepted in time. Retry and watch the TV.
-- **Power on (not just off).** This app sends Power **Off** via SSAP. Powering
-  a TV back **on** over Wi-Fi generally requires **Wake-on-LAN** plus the TV
-  setting that keeps the network interface alive while "off" (e.g. *Mobile TV
-  On*). WoL is outside this MVP's scope.
+- **Power on (Wake-on-LAN).** The app sends Power **Off** via SSAP and powers
+  the TV back **on** with a Wake-on-LAN magic packet. For this to work:
+  - You must have **connected to the TV at least once while it was on** — the
+    app learns the TV's MAC from `connectionmanager/getStatus` and stores it.
+    Until then, the **Wake** button reports that you need to connect once first.
+  - The TV must have a **WoL-capable setting enabled**, e.g. LG's *Mobile TV On*
+    / *Turn on via Wi-Fi* (often under General or Network settings). Some models
+    only wake reliably over **wired Ethernet**.
+  - Phone and TV must be on the **same subnet** — magic packets are LAN
+    broadcasts and do not cross routers/VLANs.
+  - Wake is offered on the **Previously paired** list (scan screen) and in the
+    remote's connection bar after the link drops (e.g. right after Power Off).
 - **Directional input differences.** Some webOS versions handle the pointer
   input socket differently; if arrows/OK error out, the rest of the remote
   (volume, mute, toast, power, home) still works.
@@ -245,7 +255,7 @@ and pull request to `main`: `flutter pub get` → `dart format` check →
 ## Tech Stack
 
 - **Flutter / Dart** (null-safe)
-- **`RawDatagramSocket`** (`dart:io`) for SSDP discovery
+- **`RawDatagramSocket`** (`dart:io`) for SSDP discovery and Wake-on-LAN
 - **`web_socket_channel`** for the SSAP WebSocket
 - **`shared_preferences`** for local storage of paired TVs / client keys
 - No backend.
